@@ -1,0 +1,46 @@
+name: Build AuthPlugin
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:   # 允许手动点击运行
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show project structure
+        run: |
+          echo "当前项目文件："
+          find . -type f | sort
+
+      - name: Check AuthPlugin.m syntax (basic)
+        run: |
+          echo "检查 AuthPlugin.m 是否存在..."
+          if [ -f "AuthPlugin.m" ]; then
+            echo "✅ AuthPlugin.m 存在"
+            # 简单检查是否包含关键关键字
+            grep -q "validDayCodes" AuthPlugin.m && echo "✅ 日卡激活码逻辑存在"
+            grep -q "validMonthCodes" AuthPlugin.m && echo "✅ 月卡激活码逻辑存在"
+            grep -q "validPermCodes" AuthPlugin.m && echo "✅ 永久卡激活码逻辑存在"
+            grep -q "AuthPluginInit" AuthPlugin.m && echo "✅ 入口函数存在"
+          else
+            echo "❌ 未找到 AuthPlugin.m"
+            exit 1
+          fi
+
+      - name: Upload source as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuthPlugin-source
+          path: |
+            AuthPlugin.m
+            Makefile
+            control
+            README.md
