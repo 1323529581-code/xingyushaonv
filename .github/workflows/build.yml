@@ -1,0 +1,45 @@
+
+name: Build AuthPlugin dylib
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "AuthPlugin.m"
+      - ".github/workflows/build.yml"
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build iOS dylib
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          mkdir -p build
+
+          xcrun --sdk iphoneos clang \
+            -fobjc-arc \
+            -fmodules \
+            -dynamiclib \
+            -arch arm64 \
+            -isysroot "$SDK" \
+            -miphoneos-version-min=14.0 \
+            -framework Foundation \
+            -framework UIKit \
+            -framework Security \
+            -o build/AuthPlugin.dylib \
+            AuthPlugin.m
+
+          file build/AuthPlugin.dylib
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuthPlugin-ios-arm64
+          path: build/AuthPlugin.dylib
+          if-no-files-found: error
