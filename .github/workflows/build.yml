@@ -1,0 +1,89 @@
+name: Build AuthPlugin dylib
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:   # 允许手动点击运行
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show project structure
+        run: |
+          echo "当前项目文件："
+          find . -type f | sort
+          echo ""
+          ls -la
+
+      - name: Check source file
+        run: |
+          if [ ! -f "AuthPlugin.m" ]; then
+            echo "❌ 未找到 AuthPlugin.m，请确认文件在仓库根目录"
+            exit 1
+          fi
+          echo "✅ AuthPlugin.m 存在"
+          echo "文件大小: $(wc -c < AuthPlugin.m) 字节"
+
+      - name: Install dependencies
+        run: |
+          # 安装 ldid（可选，用于伪签名）
+          brew install ldid || true
+
+      - name: Compile to dylib
+        run: |
+          set -e
+          echo "开始编译 AuthPlugin.m → AuthPlugin.dylib"
+          
+          # 获取 iPhoneOS SDK 路径
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "使用 SDK: $SDK"
+          
+          # 编译为 arm64 dylib
+          xcrun -sdk iphoneos clang \
+            -shared \
+            -fobjc-arc \
+            -dynamiclib \
+            -arch arm64 \
+            -isysroot "$SDK" \
+            -miphoneos-version-min=12.0 \
+            -framework Foundation \
+            -framework UIKit \
+            -install_name "@rpath/AuthPlugin.dylib" \
+            AuthPlugin.m \
+            -o AuthPlugin.dylib
+          
+          echo "✅ 编译成功"
+          ls -lh AuthPlugin.dylib
+          file AuthPlugin.dylib
+
+      - name: Optional - fake sign with ldid
+        run: |
+          if command -v ldid &> /dev/null; then
+            echo "使用 ldid 进行伪签名..."
+            ldid -S AuthPlugin.dylib || echo "ldid 签名失败（可忽略）"
+          else
+            echo "未安装 ldid，跳过签名"
+          fi
+
+      - name: Upload dylib artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuthPlugin-dylib
+          path: |
+            AuthPlugin.dylib
+            AuthPlugin.m
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          echo "========================================"
+          echo "编译完成！"
+          echo "请到本次运行页面底部的 Artifacts 下载 AuthPlugin-dylib"
+          echo "========================================"
