@@ -1,0 +1,9 @@
+Package: com.xingyushaenv.starlustsauth
+Name: StarLustsAuth
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Star Lusts 专属授权激活插件
+Maintainer: xingyushaenv
+Author: xingyushaenv
+Section: Tweaks
+Depends: mobilesubstrate
